@@ -40,6 +40,9 @@ client.on('messageCreate', async (message) => {
     }
   }
 
+  if (message.content === '!ysu') message.reply('wakka');
+  if (message.content === '!wakka') message.reply('ysu');
+
   if (message.content === '!status') {
     try {
       const res = await fetch('https://api.mcsrvstat.us/3/' + ip);
@@ -61,6 +64,22 @@ client.on('messageCreate', async (message) => {
       message.reply(` ${response}`);
     } catch (err) {
       message.reply(' Could not connect to the Minecraft server');
+    }
+  }
+
+  if (message.content.startsWith('!setstatusip')) {
+    const input = message.content.slice('!setstatusip'.length).trim();
+    try {
+      const res = await fetch('https://api.mcsrvstat.us/3/' + input);
+      const data = await res.json();
+      if (data.online) {
+        message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
+      } else {
+        message.reply(' Server is offline.');
+      }
+    } catch (err) {
+      console.error('Status error:', err);
+      message.reply('could not fetch server status');
     }
   }
 });
