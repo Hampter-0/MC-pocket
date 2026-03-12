@@ -24,6 +24,15 @@ async function sendRcon(command) {
 
 const ip = 'play.hampternom.nl';
 
+const commands = {
+  '!help': 'Shows server commands',
+  '!status': 'Shows server online/offline status',
+  '!players': 'Lists currently online players',
+  '!setstatusip': 'Checks status of inputed server ip after command',
+  '!ysu': '???',
+  '!wakka': '???',
+};
+
 client.once('clientReady', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
@@ -81,6 +90,14 @@ client.on('messageCreate', async (message) => {
       console.error('Status error:', err);
       message.reply('could not fetch server status');
     }
+  }
+
+  if (message.content === '!help') {
+    let helpText = '**Available Commands:**\n';
+    Object.entries(commands).forEach(([cmd, desc]) => {
+      helpText += `\`${cmd}\` -${desc}\n`;
+    });
+    message.reply(helpText);
   }
 });
 
