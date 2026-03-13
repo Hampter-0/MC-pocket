@@ -22,20 +22,109 @@ async function sendRcon(command) {
   return response;
 }
 
+class Command {
+  constructor(name, description, handler) {
+    this.name = name;
+    this.description = description;
+    this.handler = handler;
+  }
+}
+
 const ip = 'play.hampternom.nl';
 
-const commands = {
-  '!help': 'Shows server commands',
-  '!status': 'Shows server online/offline status',
-  '!players': 'Lists currently online players',
-  '!setstatusip': 'Checks status of inputed server ip after command',
-  '!ysu': '???',
-  '!wakka': '???',
-  '!ping': 'Shows bot latency',
-  '!time': 'Shows the current in-game time',
-  '!tps': 'Shows server TPS (performance)',
-  '!ip': 'Shows the server IP',
-};
+const commandList = [
+  new Command('!ping', 'Shows bot latency', async (message) => {
+    message.reply(`latency: ${client.ws.ping} ms`);
+  }),
+
+  new Command('!ysu', '???', async (message) => {
+    message.reply('wakka');
+  }),
+
+  new Command('!status', 'Shows server online/offline status', async (message) => {
+    try {
+      const res = await fetch('https://api.mcsrvstat.us/3/' + ip);
+      const data = await res.json();
+      if (data.online) {
+        message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
+      } else {
+        message.reply(' Server is offline.');
+      }
+    } catch (err) {
+      console.error('Status error:', err);
+      message.reply('could not fetch server status');
+    }
+  }),
+
+  new Command('!players', 'List currently online players', async (message) => {
+    try {
+      const response = await sendRcon('list');
+      message.reply(` ${response}`);
+    } catch (err) {
+      message.reply(' Could not connect to the Minecraft server');
+    }
+  }),
+
+  new Command('!setstatusip', 'Checks status of inputed server ip after command', async (message) => {
+    const input = message.content.slice('!setstatusip'.length).trim();
+    try {
+      const res = await fetch('https://api.mcsrvstat.us/3/' + input);
+      const data = await res.json();
+      if (data.online) {
+        message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
+      } else {
+        message.reply(' Server is offline.');
+      }
+    } catch (err) {
+      console.error('Status error:', err);
+      message.reply('could not fetch server status');
+    }
+  }),
+
+  new Command('!help', 'Shows server commands', async (message) => {
+    let helpText = '**Available Commands:**\n';
+    commandList.forEach(cmd => {
+      helpText += `\`${cmd.name}\` - ${cmd.description}\n`;
+    });
+    message.reply(helpText);
+  }),
+
+  new Command('!time', 'Shows the current in-game time', async (message) => {
+    try {
+      const response = await sendRcon('time query daytime');
+      const ticks = parseInt(response.match(/\d+/)[0]);
+      const totalMinutes = Math.floor((ticks / 20000) * 24 * 60);
+      const hours = Math.floor(totalMinutes / 60 + 6) % 24;
+      const minutes = totalMinutes % 60;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours % 12 || 12;
+      const displayMin = String(minutes).padStart(2, '0');
+      message.reply(`In-game time: ${displayHour}:${displayMin} ${ampm}`);
+    } catch (err) {
+      message.reply('Could not fetch in-game time');
+    }
+  }),
+
+  new Command('!wakka', '???', async (message) => {
+    message.reply('ysu');
+  }),
+
+  new Command('!tps', 'Shows server TPS (performance)', async (message) => {
+    try {
+      const response = await sendRcon('tps');
+      const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
+      message.reply(`${stripped}`);
+    } catch {
+      message.reply('could not fetch TPS');
+    }
+  }),
+
+  new Command('!ip', 'Shows server ip', async (message) => {
+    message.reply(`${ip}`);
+  }),
+];
+
+const commandMap = new Map(commandList.map(cmd => [cmd.name, cmd]));
 
 client.once('clientReady', () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -53,87 +142,9 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  if (message.content === '!ysu') message.reply('wakka');
-  if (message.content === '!wakka') message.reply('ysu');
-  if (message.content === '!ip') message.reply(`${ip}`);
-
-  if (message.content === '!ping') {
-    message.reply(`latency: ${client.ws.ping} ms`);
-  }
-
-  if (message.content === '!status') {
-    try {
-      const res = await fetch('https://api.mcsrvstat.us/3/' + ip);
-      const data = await res.json();
-      if (data.online) {
-        message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
-      } else {
-        message.reply(' Server is offline.');
-      }
-    } catch (err) {
-      console.error('Status error:', err);
-      message.reply('could not fetch server status');
-    }
-  }
-
-  if (message.content === '!players') {
-    try {
-      const response = await sendRcon('list');
-      message.reply(` ${response}`);
-    } catch (err) {
-      message.reply(' Could not connect to the Minecraft server');
-    }
-  }
-
-  if (message.content.startsWith('!setstatusip')) {
-    const input = message.content.slice('!setstatusip'.length).trim();
-    try {
-      const res = await fetch('https://api.mcsrvstat.us/3/' + input);
-      const data = await res.json();
-      if (data.online) {
-        message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
-      } else {
-        message.reply(' Server is offline.');
-      }
-    } catch (err) {
-      console.error('Status error:', err);
-      message.reply('could not fetch server status');
-    }
-  }
-
-  if (message.content === '!help') {
-    let helpText = '**Available Commands:**\n';
-    Object.entries(commands).forEach(([cmd, desc]) => {
-      helpText += `\`${cmd}\` -${desc}\n`;
-    });
-    message.reply(helpText);
-  }
-
-  if (message.content === '!time') {
-    try {
-      const response = await sendRcon('time query daytime');
-      const ticks = parseInt(response.match(/\d+/)[0]);
-      const totalMinutes = Math.floor((ticks / 20000) * 24 * 60);
-      const hours = Math.floor(totalMinutes / 60 + 6) % 24;
-      const minutes = totalMinutes % 60;
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHour = hours % 12 || 12;
-      const displayMin = String(minutes).padStart(2, '0');
-      message.reply(`In-game time: ${displayHour}:${displayMin} ${ampm}`);
-    } catch (err) {
-      message.reply('Could not fetch in-game time');
-    }
-  }
-
-  if (message.content === '!tps') {
-    try {
-      const response = await sendRcon('tps');
-      const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
-      message.reply(`${stripped}`);
-    } catch {
-      message.reply('could not fetch TPS');
-    }
-  }
+  const commandName = message.content.split(' ')[0].toLowerCase();
+  const command = commandMap.get(commandName);
+  if (command) await command.handler(message);
 });
 
 client.login(process.env.DISCORD_TOKEN);
