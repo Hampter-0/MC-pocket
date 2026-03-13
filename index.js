@@ -31,6 +31,10 @@ const commands = {
   '!setstatusip': 'Checks status of inputed server ip after command',
   '!ysu': '???',
   '!wakka': '???',
+  '!ping': 'Shows bot latency',
+  '!time': 'Shows the current in-game time',
+  '!tps': 'Shows server TPS (performance)',
+  '!ip': 'Shows the server IP',
 };
 
 client.once('clientReady', () => {
@@ -51,6 +55,11 @@ client.on('messageCreate', async (message) => {
 
   if (message.content === '!ysu') message.reply('wakka');
   if (message.content === '!wakka') message.reply('ysu');
+  if (message.content === '!ip') message.reply(`${ip}`);
+
+  if (message.content === '!ping') {
+    message.reply(`latency: ${client.ws.ping} ms`);
+  }
 
   if (message.content === '!status') {
     try {
@@ -98,6 +107,32 @@ client.on('messageCreate', async (message) => {
       helpText += `\`${cmd}\` -${desc}\n`;
     });
     message.reply(helpText);
+  }
+
+  if (message.content === '!time') {
+    try {
+      const response = await sendRcon('time query daytime');
+      const ticks = parseInt(response.match(/\d+/)[0]);
+      const totalMinutes = Math.floor((ticks / 20000) * 24 * 60);
+      const hours = Math.floor(totalMinutes / 60 + 6) % 24;
+      const minutes = totalMinutes % 60;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours % 12 || 12;
+      const displayMin = String(minutes).padStart(2, '0');
+      message.reply(`In-game time: ${displayHour}:${displayMin} ${ampm}`);
+    } catch (err) {
+      message.reply('Could not fetch in-game time');
+    }
+  }
+
+  if (message.content === '!tps') {
+    try {
+      const response = await sendRcon('tps');
+      const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
+      message.reply(`${stripped}`);
+    } catch {
+      message.reply('could not fetch TPS');
+    }
   }
 });
 
