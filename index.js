@@ -89,21 +89,40 @@ const commandList = [
     message.reply(helpText);
   }),
 
-  new Command('!time', 'Shows the current in-game time', async (message) => {
-    try {
-      const response = await sendRcon('time query daytime');
-      const ticks = parseInt(response.match(/\d+/)[0]);
-      const totalMinutes = Math.floor((ticks / 20000) * 24 * 60);
-      const hours = Math.floor(totalMinutes / 60 + 6) % 24;
-      const minutes = totalMinutes % 60;
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHour = hours % 12 || 12;
-      const displayMin = String(minutes).padStart(2, '0');
-      message.reply(`In-game time: ${displayHour}:${displayMin} ${ampm}`);
-    } catch (err) {
-      message.reply('Could not fetch in-game time');
+ new Command('!time', 'Shows the current in-game time', async (message) => {
+  try {
+    const response = await sendRcon('time query daytime');
+    const ticks = parseInt(response.match(/\d+/)[0]);
+    const hours = Math.floor((ticks / 1000 + 6) % 24);
+    const minutes = Math.floor((ticks % 1000) * 60 / 1000);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    const displayMin = String(minutes).padStart(2, '0');
+
+    const nightStart = 12000;
+    let ticksUntil;
+    let phase;
+
+    if (ticks < nightStart) {
+      ticksUntil = nightStart - ticks;
+      phase = "night";
+    } else {
+      ticksUntil = 24000 - ticks;
+      phase = "day";
     }
-  }),
+
+    const minutesUntil = Math.floor(ticksUntil / 1200);
+
+    message.reply(
+      `In-game time: ${displayHour}:${displayMin} ${ampm}\n` +
+      ` ${minutesUntil} minutes until ${phase}`
+    );
+
+  } catch (err) {
+    message.reply('Could not fetch in-game time');
+  }
+}),
+
 
   new Command('!wakka', '???', async (message) => {
     message.reply('ysu');
@@ -133,6 +152,12 @@ client.once('clientReady', () => {
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (message.channelId !== process.env.DISCORD_CHANNEL_ID) return;
+
+    if (message.mentions.has(client.user)) {
+    const responses = ['ysu', 'wakka'];
+    const reply = responses[Math.floor(Math.random() * responses.length)];
+    return message.reply(reply);
+  }
 
   if (!message.content.startsWith('!')) {
     try {
