@@ -150,10 +150,45 @@ client.once('clientReady', () => {
 });
 
 client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
   if (message.channelId !== process.env.DISCORD_CHANNEL_ID) return;
 
-    if (message.mentions.has(client.user)) {
+  if (message.webhookId && message.content.includes('[MC Command]')) {
+    const match = message.content.match(/:\s*(![\w]+)/);
+    if (match) {
+      const commandName = match[1].toLowerCase();
+      const command = commandMap.get(commandName);
+      if (command) {
+        const commandRelay = {
+          content: message.content,
+          reply: async (text) => {
+            await message.channel.send(text);
+            try {
+              const plainText = text
+                .replace(/\*\*/g, '')
+                .replace(/`/g, '');
+              const lines = plainText.split('\n').filter(line => line.trim() !== '');
+              for (const line of lines) {
+                await sendRcon(`say [Bot] ${line}`);
+              }
+            } catch (err) {
+              console.error('RCON relay error:', err);
+            }
+            try {
+              await message.delete();
+            } catch (err) {
+              console.error('Could not delete message:', err);
+            }
+          }
+        };
+        await command.handler(commandRelay);
+      }
+    }
+    return;
+  }
+
+  if (message.author.bot) return;
+
+  if (message.mentions.has(client.user)) {
     const responses = ['ysu', 'wakka'];
     const reply = responses[Math.floor(Math.random() * responses.length)];
     return message.reply(reply);
