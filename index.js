@@ -69,7 +69,12 @@ const commandList = [
     const input = message.content.slice('!setstatusip'.length).trim();
     try {
       const res = await fetch('https://api.mcsrvstat.us/3/' + input);
+      // console.log(res);
       const data = await res.json();
+      console.log(input);
+
+      //FIX INPUT FORMAT FROM MC COMMAND
+
       if (data.online) {
         message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
       } else {
@@ -152,39 +157,38 @@ client.once('clientReady', () => {
 client.on('messageCreate', async (message) => {
   if (message.channelId !== process.env.DISCORD_CHANNEL_ID) return;
 
-  if (message.webhookId && message.content.includes('[MC Command]')) {
-    const match = message.content.match(/:\s*(![\w]+)/);
-    if (match) {
-      const commandName = match[1].toLowerCase();
-      const command = commandMap.get(commandName);
-      if (command) {
-        const commandRelay = {
-          content: message.content,
-          reply: async (text) => {
-            await message.channel.send(text);
-            try {
-              const plainText = text
-                .replace(/\*\*/g, '')
-                .replace(/`/g, '');
-              const lines = plainText.split('\n').filter(line => line.trim() !== '');
-              for (const line of lines) {
-                await sendRcon(`say [Bot] ${line}`);
-              }
-            } catch (err) {
-              console.error('RCON relay error:', err);
+if (message.webhookId && message.content.includes('[MC Command]')) {
+  const match = message.content.match(/:\s*(![\w]+)(.*)/);
+  if (match) {
+    const commandName = match[1].toLowerCase();
+    const args = match[2].trim();
+    const command = commandMap.get(commandName);
+    if (command) {
+      const commandRelay = {
+        content: commandName + ' ' + args,
+        reply: async (text) => {
+          await message.channel.send(text);
+          try {
+            const plainText = text.replace(/\*\*/g, '').replace(/`/g, '');
+            const lines = plainText.split('\n').filter(line => line.trim() !== '');
+            for (const line of lines) {
+              await sendRcon(`say [Bot] ${line}`);
             }
-            try {
-              await message.delete();
-            } catch (err) {
-              console.error('Could not delete message:', err);
-            }
+          } catch (err) {
+            console.error('RCON relay error:', err);
           }
-        };
-        await command.handler(commandRelay);
-      }
+          // try {
+          //   await message.delete();
+          // } catch (err) {
+          //   console.error('Could not delete message:', err);
+          // }
+        }
+      };
+      await command.handler(commandRelay);
     }
-    return;
   }
+  return;
+}
 
   if (message.author.bot) return;
 
