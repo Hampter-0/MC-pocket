@@ -10,16 +10,40 @@ const client = new Client({
   ]
 });
 
+let rcon = null;
+
+async function connectRcon() {
+  try {
+    rcon = new Rcon({
+      host: process.env.RCON_HOST,
+      port: Number(process.env.RCON_PORT),
+      password: process.env.RCON_PASSWORD
+    });
+
+    rcon.on('error', (err) => {
+      console.error('RCON error:', err.message);
+      rcon = null;
+      setTimeout(connectRcon, 5000);
+    });
+
+    rcon.on('end', () => {
+      console.log('RCON connection closed, reconnecting...');
+      rcon = null;
+      setTimeout(connectRcon, 5000);
+    });
+
+    await rcon.connect();
+    console.log('RCON connected!');
+  } catch (err) {
+    console.error('RCON connection failed:', err.message);
+    rcon = null;
+    setTimeout(connectRcon, 5000);
+  }
+}
+
 async function sendRcon(command) {
-  const rcon = new Rcon({
-    host: process.env.RCON_HOST,
-    port: Number(process.env.RCON_PORT),
-    password: process.env.RCON_PASSWORD
-  });
-  await rcon.connect();
-  const response = await rcon.send(command);
-  await rcon.end();
-  return response;
+  if (!rcon) throw new Error('RCON not connected');
+  return await rcon.send(command);
 }
 
 class Command {
@@ -160,8 +184,9 @@ const commandList = [
 
 const commandMap = new Map(commandList.map(cmd => [cmd.name, cmd]));
 
-client.once('clientReady', () => {
+client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
+  await connectRcon();
 });
 
 client.on('messageCreate', async (message) => {
