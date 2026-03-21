@@ -30,7 +30,7 @@ class Command {
   }
 }
 
-const ip = 'play.hampternom.nl';
+const ip = process.env.MC_IP;
 
 const commandList = [
   new Command('!ping', 'Shows bot latency', async (message) => {
@@ -94,39 +94,39 @@ const commandList = [
     message.reply(helpText);
   }),
 
- new Command('!time', 'Shows the current in-game time', async (message) => {
-  try {
-    const response = await sendRcon('time query daytime');
-    const ticks = parseInt(response.match(/\d+/)[0]);
-    const hours = Math.floor((ticks / 1000 + 6) % 24);
-    const minutes = Math.floor((ticks % 1000) * 60 / 1000);
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHour = hours % 12 || 12;
-    const displayMin = String(minutes).padStart(2, '0');
+  new Command('!time', 'Shows the current in-game time', async (message) => {
+    try {
+      const response = await sendRcon('time query daytime');
+      const ticks = parseInt(response.match(/\d+/)[0]);
+      const hours = Math.floor((ticks / 1000 + 6) % 24);
+      const minutes = Math.floor((ticks % 1000) * 60 / 1000);
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours % 12 || 12;
+      const displayMin = String(minutes).padStart(2, '0');
 
-    const nightStart = 12000;
-    let ticksUntil;
-    let phase;
+      const nightStart = 12000;
+      let ticksUntil;
+      let phase;
 
-    if (ticks < nightStart) {
-      ticksUntil = nightStart - ticks;
-      phase = "night";
-    } else {
-      ticksUntil = 24000 - ticks;
-      phase = "day";
+      if (ticks < nightStart) {
+        ticksUntil = nightStart - ticks;
+        phase = "night";
+      } else {
+        ticksUntil = 24000 - ticks;
+        phase = "day";
+      }
+
+      const minutesUntil = Math.floor(ticksUntil / 1200);
+
+      message.reply(
+        `In-game time: ${displayHour}:${displayMin} ${ampm}\n` +
+        ` ${minutesUntil} minutes until ${phase}`
+      );
+
+    } catch (err) {
+      message.reply('Could not fetch in-game time');
     }
-
-    const minutesUntil = Math.floor(ticksUntil / 1200);
-
-    message.reply(
-      `In-game time: ${displayHour}:${displayMin} ${ampm}\n` +
-      ` ${minutesUntil} minutes until ${phase}`
-    );
-
-  } catch (err) {
-    message.reply('Could not fetch in-game time');
-  }
-}),
+  }),
 
 
   new Command('!wakka', '???', async (message) => {
@@ -146,6 +146,16 @@ const commandList = [
   new Command('!ip', 'Shows server ip', async (message) => {
     message.reply(`${ip}`);
   }),
+
+  new Command('!version', 'Shows current minecraft server version', async (message) => {
+    try {
+      const response = await sendRcon('version');
+      const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
+      message.reply(stripped);
+    } catch (err) {
+      message.reply('could not connect to minecraft server');
+    }
+  })
 ];
 
 const commandMap = new Map(commandList.map(cmd => [cmd.name, cmd]));
@@ -157,38 +167,38 @@ client.once('clientReady', () => {
 client.on('messageCreate', async (message) => {
   if (message.channelId !== process.env.DISCORD_CHANNEL_ID) return;
 
-if (message.webhookId && message.content.includes('[MC Command]')) {
-  const match = message.content.match(/:\s*(![\w]+)(.*)/);
-  if (match) {
-    const commandName = match[1].toLowerCase();
-    const args = match[2].trim();
-    const command = commandMap.get(commandName);
-    if (command) {
-      const commandRelay = {
-        content: commandName + ' ' + args,
-        reply: async (text) => {
-          await message.channel.send(text);
-          try {
-            const plainText = text.replace(/\*\*/g, '').replace(/`/g, '');
-            const lines = plainText.split('\n').filter(line => line.trim() !== '');
-            for (const line of lines) {
-              await sendRcon(`say [Bot] ${line}`);
+  if (message.webhookId && message.content.includes('[MC Command]')) {
+    const match = message.content.match(/:\s*(![\w]+)(.*)/);
+    if (match) {
+      const commandName = match[1].toLowerCase();
+      const args = match[2].trim();
+      const command = commandMap.get(commandName);
+      if (command) {
+        const commandRelay = {
+          content: commandName + ' ' + args,
+          reply: async (text) => {
+            await message.channel.send(text);
+            try {
+              const plainText = text.replace(/\*\*/g, '').replace(/`/g, '');
+              const lines = plainText.split('\n').filter(line => line.trim() !== '');
+              for (const line of lines) {
+                await sendRcon(`say [Bot] ${line}`);
+              }
+            } catch (err) {
+              console.error('RCON relay error:', err);
             }
-          } catch (err) {
-            console.error('RCON relay error:', err);
+            // try {
+            //   await message.delete();
+            // } catch (err) {
+            //   console.error('Could not delete message:', err);
+            // }
           }
-          // try {
-          //   await message.delete();
-          // } catch (err) {
-          //   console.error('Could not delete message:', err);
-          // }
-        }
-      };
-      await command.handler(commandRelay);
+        };
+        await command.handler(commandRelay);
+      }
     }
+    return;
   }
-  return;
-}
 
   if (message.author.bot) return;
 
