@@ -33,7 +33,7 @@ async function connectRcon() {
     });
 
     await rcon.connect();
-    console.log('RCON connected!');
+    console.log('RCON connected');
   } catch (err) {
     console.error('RCON connection failed:', err.message);
     rcon = null;
@@ -96,8 +96,6 @@ const commandList = [
       // console.log(res);
       const data = await res.json();
       console.log(input);
-
-      //FIX INPUT FORMAT FROM MC COMMAND
 
       if (data.online) {
         message.reply(` Server is online with ${data.players.online}/${data.players.max} players!`);
@@ -177,6 +175,16 @@ const commandList = [
       const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
       message.reply(stripped);
     } catch (err) {
+      message.reply('could not connect to minecraft server');
+    }
+  }),
+
+  new Command('!info', 'Shows minecraft server info', async(message) =>{
+    try {
+      const response = ` server ip: ${ip} `+ '\n \n' + await sendRcon('version') +  await sendRcon('list') ;
+      const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
+      message.reply(stripped);
+    } catch(err){
       message.reply('could not connect to minecraft server');
     }
   })
