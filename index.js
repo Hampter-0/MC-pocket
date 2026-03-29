@@ -179,12 +179,23 @@ const commandList = [
     }
   }),
 
-  new Command('!info', 'Shows minecraft server info', async(message) =>{
+  new Command('!stats', 'Shows player stats', async (message) => {
+    const username = message.content.slice('!stats'.length).trim();
+    if (!username) return message.reply('Usage: !stats <username>');
     try {
-      const response = ` server ip: ${ip} `+ '\n \n' + await sendRcon('version') +  await sendRcon('list') ;
+      await sendRcon(`discordstats ${username}`);
+      message.reply('Fetching stats...');
+    } catch (err) {
+      message.reply('Could not connect to Minecraft server');
+    }
+  }),
+
+  new Command('!info', 'Shows minecraft server info', async (message) => {
+    try {
+      const response = ` server ip: ${ip} ` + '\n \n' + await sendRcon('version') + await sendRcon('list');
       const stripped = response.replace(/§[0-9a-fk-or]/gi, '');
       message.reply(stripped);
-    } catch(err){
+    } catch (err) {
       message.reply('could not connect to minecraft server');
     }
   })
