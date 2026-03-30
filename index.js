@@ -179,6 +179,17 @@ const commandList = [
     }
   }),
 
+  new Command('!advancements', 'Shows player advancements', async (message) => {
+    const username = message.content.slice('!advancements'.length).trim();
+    if (!username) return message.reply('Usage: !advancements <username>');
+    try {
+      await sendRcon(`discordadvancements ${username}`);
+      message.reply('Fetching advancements...');
+    } catch (err) {
+      message.reply('Could not connect to Minecraft server');
+    }
+  }),
+
   new Command('!stats', 'Shows player stats', async (message) => {
     const username = message.content.slice('!stats'.length).trim();
     if (!username) return message.reply('Usage: !stats <username>');
